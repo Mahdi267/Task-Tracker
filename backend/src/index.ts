@@ -1,0 +1,1 @@
+console.log("Le projet démarre correctement !");
