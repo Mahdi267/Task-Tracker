@@ -1,5 +1,6 @@
 import express from "express";
 import { prisma } from "./prisma";
+import { ProjectScalarFieldEnum } from "./generated/prisma/internal/prismaNamespace";
 
 const app = express();
 const PORT = 3000;
@@ -85,6 +86,91 @@ app.delete("/users/:id", async (req, res) => {
     } catch (error: any) {
         if (error.code === "P2025") {
             res.status(404).json({ error: "Utilisateur introuvable." });
+        } else {
+            console.error(error);
+            res.status(500).json({ error: "Une erreur interne est survenue." });
+        }
+    }
+});
+
+// Créer un porjet
+app.post("/projects", async (req, res) => {
+    const { name, description, ownerId } = req.body;
+
+    try {
+        const project = await prisma.project.create({
+            data: { name, description, ownerId },
+        });
+        res.status(201).json(project);
+    } catch (error: any){
+        if (error.code === "P2003") {
+            res.status(400).json({ error: "L'utilisateur propriétaire (ownerId) n'existe pas." });
+        } else {
+            console.error(error);
+            res.status(500).json({ error: "Une erreur interne est survenue." });
+        }
+    }
+});
+
+// Lister tous les projets (avec les infos du owner inclus)
+app.get("/projects", async (req, res) => {
+    const projects = await prisma.project.findMany({
+        include: { owner: true },
+    });
+    res.json(projects);
+});
+
+// Récupérer un projet précis
+app.get("/projects/:id", async (req, res) => {
+    const id = Number(req.params.id);
+
+    const projet = await prisma.project.findUnique({
+        where: { id },
+        include: { owner: true },
+    });
+
+    if (!projet) {
+        res.status(404).json({ error: "Project introuvable." });
+        return;
+    }
+
+    res.json(projet);
+});
+
+// Modifier un projet
+app.put("/projects/:id", async (req, res) => {
+    const id = Number(req.params.id);
+    const {name, description, ownerId} = req.body;
+
+    try{
+        const project = await prisma.project.update({
+            where: { id },
+            data: { name, description, ownerId },
+        });
+        res.json(project);
+    } catch (error: any) {
+        if (error.code === "P2025") {
+            res.status(404).json({ error: "Projet introuvable." });
+        } else if (error.code === "P2003") {
+            res.status(400).json({ error: "L'utilisateur propriétaire (ownerId) n'existe pas." });
+        } else {
+            console.error(error);
+            res.status(500).json({ error: "Une erreur interne est survenue." });
+        }
+    }
+
+});
+
+// Supprimer nn projet
+app.delete("/projects/:id", async (req, res) => {
+    const id = Number(req.params.id);
+
+    try {
+        await prisma.project.delete({ where: { id } });
+        res.status(204).send();
+    } catch (error: any) {
+        if (error.code === "P2025") {
+            res.status(404).json({ error: "Projet introuvable." });
         } else {
             console.error(error);
             res.status(500).json({ error: "Une erreur interne est survenue." });
