@@ -1,6 +1,14 @@
 import express from "express";
 import { prisma } from "./prisma";
 import { ProjectScalarFieldEnum } from "./generated/prisma/internal/prismaNamespace";
+import bcrypt from "bcrypt";
+import { parseArgs } from "node:util";
+
+// Retirer le mot de passe d'un objet user avant de le renvoyer au client
+function excludePassword(user: any) {
+    const { password, ...userSansPassword } = user;
+    return userSansPassword;
+}
 
 const app = express();
 const PORT = 3000;
@@ -18,11 +26,13 @@ app.post("/users", async (req, res) => {
     const { email, password, name } = req.body;
 
     try{
+        const hashedPassword = await bcrypt.hash(password, 10);
+
         const user = await prisma.user.create({
-            data: { email, password, name },
+            data: { email, password: hashedPassword, name },
         });
 
-        res.status(201).json(user);
+        res.status(201).json(excludePassword(user));
     } catch (error: any) {
         if (error.code == "P2002") {
             res.status(409).json({ error: "Cet email est déjà utilisé." });
@@ -36,7 +46,7 @@ app.post("/users", async (req, res) => {
 // Lister tous les utilisateurs
 app.get("/users", async (req, res) => {
     const users = await prisma.user.findMany();
-    res.json(users);
+    res.json(users.map(excludePassword));
 });
 
 // Récupérer un utilisateur précis
@@ -50,7 +60,7 @@ app.get("/users/:id", async (req, res) => {
         return;
     }
 
-    res.json(user);
+    res.json(excludePassword(user));
 })
 
 // Modifier un utilisateur
@@ -59,11 +69,16 @@ app.put("/users/:id", async (req, res) => {
     const { email, password, name } = req.body;
 
     try {
+        const data: any = { email, name };
+        if (password) {
+            data.password = await bcrypt.hash(password, 10);
+        }
+
         const user = await prisma.user.update({
-        where: {id},
-        data: { email, password, name },
+            where: { id },
+            data,
      });
-     res.json(user);
+     res.json(excludePassword(user));
     } catch (error: any) {
         if (error.code === "P2025") {
             res.status(404).json({ error: "Utilisateur introuvable." });
