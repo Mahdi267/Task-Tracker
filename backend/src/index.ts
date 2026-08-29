@@ -178,6 +178,90 @@ app.delete("/projects/:id", async (req, res) => {
     }
 });
 
+// Créer une tâche
+app.post("/tasks", async (req, res) => {
+    const { title, description, status, projectId, assigneeId } = req.body;
+
+    try {
+        const task = await prisma.task.create({
+            data: { title, description, status, projectId, assigneeId },
+        });
+        res.status(203).json(task);
+    } catch (error: any) {
+        if (error.code === "P2003") {
+            res.status(404).json({ error: "Le projet ou l'utilisateur assigné n'existe pas." });
+        } else {
+            console.error(error);
+            res.status(500).json({ error: "Une erreur interne est survenue." });
+        }
+    }
+});
+
+// Lister toute les tâches (avec project et assignee inclus)
+app.get("/tasks", async (req, res) => {
+    const tasks = await prisma.task.findMany({
+        include: { project: true, assignee: true },
+    });
+    res.json(tasks);
+});
+
+// Récupérer une tâche précise
+app.get("/tasks/:id", async (req, res) => {
+    const id = Number(req.params.id);
+
+    const task = await prisma.task.findUnique({
+        where: { id },
+        include: { project: true, assignee: true },
+    });
+
+    if (!task) {
+        res.status(404).json({ error: "Tâche introuvable." });
+        return;
+    }
+
+    res.json(task);
+});
+
+// Modifier une tâche
+app.put("/tasks/:id", async (req, res) => {
+    const id = Number(req.params.id);
+    const { title, description, status, projectId, assigneeId } = req.body;
+
+    try {
+        const task = await prisma.task.update({
+            where: { id },
+            data: { title, description, status, projectId, assigneeId },
+        });
+        res.json(task);
+    } catch (error: any) {
+        if (error.code === "P2025") {
+            res.status(404).json({ error: "Tâche introuvable." });
+        } else if (error.code === "P2003") {
+            res.status(400).json({ error: "Le projet ou l'utilisateur assigné n'existe pas." });
+        } else {
+            console.error(error);
+            res.status(500).json({ error: "Une erreur interne est survenue." });
+        }
+    }
+});
+
+// Supprimer une tâche
+app.delete("/tasks/:id", async (req, res) => {
+    const id = Number(req.params.id);
+
+    try {
+        await prisma.task.delete({ where: { id } });
+        res.status(204).send();
+    } catch (error: any) {
+        if (error.code === "P2025") {
+            res.status(404).json({ error: "Tâche introuvable." });
+        } else {
+            console.error(error);
+            res.status(500).json({ error: "Une erreur interne est survenue." });
+        }
+    }
+});
+
 app.listen(PORT, () => {
     console.log(`Serveur démarré sur http://localhost:${PORT}`);
 });
