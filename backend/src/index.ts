@@ -11,6 +11,34 @@ function excludePassword(user: any) {
     return userSansPassword;
 }
 
+// Étend le type Request d'Express pour y ajouter userId
+declare global {
+    namespace Express {
+        interface Request {
+            userId?: number;
+        }
+    }
+}
+
+function requireAuth(req: express.Request, res: express.Response, next: express.NextFunction) {
+    const authHeader = req.headers.authorization;
+
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+        res.status(401).json({ error: "Jeton d'authentification manquant." });
+        return;
+    }
+
+    const token = authHeader.split(" ")[1];
+
+    try {
+        const payload = jwt.verify(token, process.env.JWT_SECRET as string) as { userId: number };
+        req.userId = payload.userId;
+        next();
+    } catch (error) {
+        res.status(401).json({ error: "Jeton d'authentification invalide ou expiré." });
+    }
+}
+
 const app = express();
 const PORT = 3000;
 
@@ -142,8 +170,14 @@ app.post("/login", async (req, res) => {
 });
 
 // Créer un porjet
-app.post("/projects", async (req, res) => {
-    const { name, description, ownerId } = req.body;
+app.post("/projects", requireAuth, async (req, res) => {
+    const { name, description } = req.body;
+    const ownerId = req.userId;
+
+    if (!ownerId) {
+        res.status(401).json({ error: "Non authentifié." });
+        return;
+    }
 
     try {
         const project = await prisma.project.create({
