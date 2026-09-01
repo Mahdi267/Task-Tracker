@@ -3,6 +3,7 @@ import { prisma } from "./prisma";
 import { ProjectScalarFieldEnum } from "./generated/prisma/internal/prismaNamespace";
 import bcrypt from "bcrypt";
 import { parseArgs } from "node:util";
+import jwt from "jsonwebtoken";
 
 // Retirer le mot de passe d'un objet user avant de le renvoyer au client
 function excludePassword(user: any) {
@@ -105,6 +106,38 @@ app.delete("/users/:id", async (req, res) => {
             console.error(error);
             res.status(500).json({ error: "Une erreur interne est survenue." });
         }
+    }
+});
+
+// Vérifier les informations de connexion
+app.post("/login", async (req, res) => {
+    const { email, password } = req.body;
+
+    try {
+        const user = await prisma.user.findUnique({ where: { email } });
+
+        if (!user) {
+            res.status(401).json({ error: "Email ou mot de passe incorrect." });
+            return;
+        }
+
+        const passwordValid = await bcrypt.compare(password, user.password);
+
+        if (!passwordValid) {
+            res.status(401).json({ error: "Email ou mot de passe incorrect." });
+            return;
+        }
+
+        const token = jwt.sign(
+            { userId: user.id },
+            process.env.JWT_SECRET as string,
+            { expiresIn: "24h" }
+        );
+
+        res.json({ token });
+    } catch (error: any) {
+        console.error(error);
+        res.status(500).json({ error: "Une erreur interne est survenue." });
     }
 });
 
