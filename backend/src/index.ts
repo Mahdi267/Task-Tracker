@@ -93,8 +93,14 @@ app.get("/users/:id", async (req, res) => {
 })
 
 // Modifier un utilisateur
-app.put("/users/:id", async (req, res) => {
+app.put("/users/:id", requireAuth, async (req, res) => {
     const id = Number(req.params.id);
+
+    if (req.userId !== id) {
+        res.status(403).json({ error: "Vous ne pouvez modifier que votre propre compte." });
+        return;
+    }
+
     const { email, password, name } = req.body;
 
     try {
@@ -121,8 +127,13 @@ app.put("/users/:id", async (req, res) => {
 });
 
 // Supprimer un utilisateur
-app.delete("/users/:id", async (req, res) => {
+app.delete("/users/:id", requireAuth, async (req, res) => {
     const id = Number(req.params.id);
+
+    if (req.userId !== id) {
+        res.status(403).json({ error: "Vous ne pouvez supprimer que votre propre compte." });
+        return;
+    }
 
     try {
         await prisma.user.delete({ where: {id} });
@@ -220,7 +231,7 @@ app.get("/projects/:id", async (req, res) => {
 });
 
 // Modifier un projet
-app.put("/projects/:id", async (req, res) => {
+app.put("/projects/:id", requireAuth, async (req, res) => {
     const id = Number(req.params.id);
     const {name, description, ownerId} = req.body;
 
@@ -244,7 +255,7 @@ app.put("/projects/:id", async (req, res) => {
 });
 
 // Supprimer nn projet
-app.delete("/projects/:id", async (req, res) => {
+app.delete("/projects/:id", requireAuth, async (req, res) => {
     const id = Number(req.params.id);
 
     try {
@@ -261,7 +272,7 @@ app.delete("/projects/:id", async (req, res) => {
 });
 
 // Créer une tâche
-app.post("/tasks", async (req, res) => {
+app.post("/tasks", requireAuth, async (req, res) => {
     const { title, description, status, projectId, assigneeId } = req.body;
 
     try {
@@ -305,7 +316,7 @@ app.get("/tasks/:id", async (req, res) => {
 });
 
 // Modifier une tâche
-app.put("/tasks/:id", async (req, res) => {
+app.put("/tasks/:id", requireAuth, async (req, res) => {
     const id = Number(req.params.id);
     const { title, description, status, projectId, assigneeId } = req.body;
 
@@ -328,7 +339,7 @@ app.put("/tasks/:id", async (req, res) => {
 });
 
 // Supprimer une tâche
-app.delete("/tasks/:id", async (req, res) => {
+app.delete("/tasks/:id", requireAuth, async (req, res) => {
     const id = Number(req.params.id);
 
     try {
