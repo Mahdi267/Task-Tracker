@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useState, type SubmitEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../api";
 
@@ -8,7 +8,7 @@ export default function LoginPage () {
     const [error, setError] = useState("");
     const navigate = useNavigate();
 
-    async function handleSubmit(e: FormEvent) {
+    async function handleSubmit(e: SubmitEvent<HTMLFormElement>) {
         e.preventDefault();
         setError("");
 
