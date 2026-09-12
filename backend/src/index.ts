@@ -4,6 +4,7 @@ import { ProjectScalarFieldEnum } from "./generated/prisma/internal/prismaNamesp
 import bcrypt from "bcrypt";
 import { parseArgs } from "node:util";
 import jwt from "jsonwebtoken";
+import cors from "cors";
 
 // Retirer le mot de passe d'un objet user avant de le renvoyer au client
 function excludePassword(user: any) {
@@ -41,6 +42,10 @@ function requireAuth(req: express.Request, res: express.Response, next: express.
 
 const app = express();
 const PORT = 3000;
+
+app.use(cors({
+    origin: "http://localhost:5173",
+}));
 
 // Middleware pour parser le JSON dans les requêtes
 app.use(express.json());
